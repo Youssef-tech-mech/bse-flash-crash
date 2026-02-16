@@ -3,3 +3,4 @@ pandas==2.2.1
 scipy==1.12.0
 matplotlib==3.8.3
 seaborn==0.13.2
+black==24.2.0
