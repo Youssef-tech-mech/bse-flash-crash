@@ -27,7 +27,7 @@ bse-flash-crash/
 ## Quick Start
 ```bash
 # 1. Clone and enter
-git clone <your-repo-url>
+git clone https://github.com/Youssef-tech-mech/bse-flash-crash
 cd bse-flash-crash
 
 # 2. Create virtual environment
