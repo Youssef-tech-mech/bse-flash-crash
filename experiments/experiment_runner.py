@@ -41,7 +41,7 @@ def build_order_schedule(starttime: float, endtime: float) -> Dict[str, Any]:
         Order schedule dict for BSE market_session
     """
     # Price ranges: supply 80-120, demand 80-120
-    range_supply = (80, 120)
+    range_supply = (80, 100)
     range_demand = (80, 120)
 
     supply_schedule = [
@@ -65,7 +65,7 @@ def build_order_schedule(starttime: float, endtime: float) -> Dict[str, Any]:
     order_sched = {
         'sup': supply_schedule,
         'dem': demand_schedule,
-        'interval': 10,
+        'interval': 1,
         'timemode': 'drip-poisson'
     }
 
@@ -75,12 +75,6 @@ def build_order_schedule(starttime: float, endtime: float) -> Dict[str, Any]:
 def parse_tape_csv(tape_path: str) -> Optional[Dict[str, float]]:
     """
     Parse transaction tape CSV and compute statistics.
-
-    Args:
-        tape_path: Path to tape CSV file
-
-    Returns:
-        Dict with keys: mean_price, price_std, n_trades, or None if file not found
     """
     if not os.path.exists(tape_path):
         return None
@@ -89,13 +83,17 @@ def parse_tape_csv(tape_path: str) -> Optional[Dict[str, float]]:
         prices = []
         with open(tape_path, 'r') as f:
             reader = csv.reader(f)
+            # No next(reader) here, start reading immediately!
             for row in reader:
-                if len(row) >= 2:
-                    try:
-                        price = float(row[1])
-                        prices.append(price)
-                    except ValueError:
-                        continue
+                # Defensively skip empty rows or non-TRD events
+                if len(row) < 3 or row[0].strip() != 'TRD':
+                    continue
+                try:
+                    # Index 2 is the price! (e.g., TRD, 7.600000, 93)
+                    price = float(row[2])
+                    prices.append(price)
+                except ValueError:
+                    continue
 
         if not prices:
             return None
@@ -112,7 +110,6 @@ def parse_tape_csv(tape_path: str) -> Optional[Dict[str, float]]:
     except Exception as e:
         print(f"  Warning: Failed to parse {tape_path}: {e}")
         return None
-
 
 def run_trial(
     seed: int,
@@ -138,18 +135,19 @@ def run_trial(
     random.seed(seed)
 
     # Create session ID
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
     sess_name = f"{condition}_seed{seed}"
     sess_id = os.path.join(output_dir, sess_name)
     # Build trader specs
     if condition == 'baseline':
         traders_spec = {
-            'sellers': [('ZIP', 5)],
-            'buyers': [('ZIP', 5)]
+            'sellers': [('ZIP', 25)],
+            'buyers': [('ZIP', 25)]
         }
     elif condition == 'treatment':
         traders_spec = {
-            'sellers': [('ZIP', 4), ('SPOOFER_V1', 1)],
-            'buyers': [('ZIP', 5)]
+            'sellers': [('ZIP', 22), ('SPOOFER_V1', 3)],
+            'buyers': [('ZIP', 25)]
         }
     else:
         raise ValueError(f"Unknown condition: {condition}")
@@ -182,9 +180,8 @@ def run_trial(
             sess_vrbs=False
         )
 
-        # Parse results
-        tape_filename = f"{sess_id}_tape.csv"
-        tape_path = os.path.join(output_dir, tape_filename)
+        # Parse results - sess_id already contains the output_dir!
+        tape_path = f"{sess_id}_tape.csv"
 
         stats = parse_tape_csv(tape_path)
         if stats is None:

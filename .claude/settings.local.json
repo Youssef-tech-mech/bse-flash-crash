@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rtk grep *)",
+      "Bash(Get-Content \"C:\\\\Users\\\\User\\\\PycharmProjects\\\\bse-flash-crash\\\\src\\\\bse\\\\BSE.py\" -TotalCount 50)",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Users\\\\User\\\\PycharmProjects\\\\bse-flash-crash\\\\experiments\")",
+      "Bash(Out-Null)",
+      "Bash(Write-Output \"Directory created\")",
+      "PowerShell(New-Item *)",
+      "Bash(rtk ls *)",
+      "Bash(python -m py_compile \"C:\\\\Users\\\\User\\\\PycharmProjects\\\\bse-flash-crash\\\\experiments\\\\experiment_runner.py\")",
+      "Bash(python -m py_compile \"C:\\\\Users\\\\User\\\\PycharmProjects\\\\bse-flash-crash\\\\analysis\\\\stats.py\")",
+      "Bash(python -m py_compile \"C:\\\\Users\\\\User\\\\PycharmProjects\\\\bse-flash-crash\\\\analysis\\\\plots.py\")"
+    ]
+  }
+}

@@ -13,3 +13,22 @@ figures/*.png
 figures/*.pdf
 src/bse/BSE.py
 .ipynb_checkpoints/
+
+# AI prompt files
+gemini_prompt*.md
+*_gemini.md
+*_claude.md
+
+# BSE (downloaded separately)
+src/bse/BSE.py
+
+# Data outputs (large, reproducible)
+data/
+figures/*.pdf
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+docs/SESSION_*.md
