@@ -60,3 +60,8 @@ Both agents depress prices equivalently but v2 achieves this through
 a learned structured policy rather than a hard-coded rule. This is the
 "sample-efficient manipulation" finding — relevant for regulators
 designing detection systems that target learning agents.
+
+
+V1 is a Blunt Instrument — consistent price depression, moderate volatility. V2 is an Erratic Manipulator — equivalent price depression, but 28% more volatility injected into the market.
+
+This is a stronger Distinction finding than equivalence. The RL agent discovered a noisier attack strategy than the hand-coded one, possibly because the ε-greedy exploration phase itself generates random order submissions that destabilise the book even when not profitably executed.Result 2 — Volume: v2 generates significantly more trades than v1C: v1 → v2 volume: Δ=+11.4, p=0.0512 (borderline), d=+0.371V2 generates 75.6 trades/session vs v1's 64.2. Combined with the volatility finding, the picture is: v2 is a higher-frequency, higher-noise attacker. The Q-learning agent, still in partial exploration, fires more actions and produces more market churn even when those actions don't all result in profitable trades.

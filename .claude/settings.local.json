@@ -11,7 +11,11 @@
       "Bash(python -m py_compile \"C:\\\\Users\\\\User\\\\PycharmProjects\\\\bse-flash-crash\\\\experiments\\\\experiment_runner.py\")",
       "Bash(python -m py_compile \"C:\\\\Users\\\\User\\\\PycharmProjects\\\\bse-flash-crash\\\\analysis\\\\stats.py\")",
       "Bash(python -m py_compile \"C:\\\\Users\\\\User\\\\PycharmProjects\\\\bse-flash-crash\\\\analysis\\\\plots.py\")",
-      "Bash(python -m py_compile \"C:\\\\Users\\\\User\\\\PycharmProjects\\\\bse-flash-crash\\\\src\\\\agents\\\\spoofer_q.py\")"
+      "Bash(python -m py_compile \"C:\\\\Users\\\\User\\\\PycharmProjects\\\\bse-flash-crash\\\\src\\\\agents\\\\spoofer_q.py\")",
+      "Bash(python3 *)",
+      "Bash(python -m py_compile analysis/plots.py)",
+      "Bash(rtk wc *)",
+      "Bash(python *)"
     ]
   }
 }

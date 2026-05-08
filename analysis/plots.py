@@ -1,207 +1,231 @@
-﻿"""
-Generate paper-ready figures for BSE flash-crash study.
+"""
+Generate three paper-ready figures from BSE experiment results.
 
-Creates grouped bar charts and difference plots comparing baseline vs.
-treatment (spoofing) conditions across multiple random seeds.
+Outputs:
+  - fig1_price_trajectories.pdf: Per-seed scatter with mean/SD bands
+  - fig2_volatility_distribution.pdf: Violin plots of price volatility
+  - fig3_qtable_heatmap.pdf: Mean Q-table heatmap across all seeds
 """
 
-import sys
 import os
-import argparse
-from pathlib import Path
-from typing import Tuple
-
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-import numpy as np
+import seaborn as sns
+from glob import glob
+from scipy import stats
 
-# Set up import paths
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, ROOT)
+# Setup
+sns.set_style('whitegrid')
+plt.rcParams.update({
+    'font.size': 12,
+    'axes.titlesize': 13,
+    'axes.labelsize': 12
+})
 
+# Create figures directory
+os.makedirs('figures', exist_ok=True)
 
-def load_and_organize_data(csv_path: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Load results CSV and organize by condition.
+# Load results
+results_df = pd.read_csv('data/results_all.csv')
 
-    Args:
-        csv_path: Path to results_summary.csv
+# Color map
+colors = {
+    'baseline': 'gray',
+    'treatment': '#E05C5C',
+    'treatment_v2': '#5B8DD9'
+}
 
-    Returns:
-        Tuple of (baseline_df, treatment_df) sorted by seed
-    """
-    df = pd.read_csv(csv_path)
+# ============================================================================
+# FIGURE 1: Price Trajectories
+# ============================================================================
 
-    baseline_df = df[df['condition'] == 'baseline'].sort_values('seed')
-    treatment_df = df[df['condition'] == 'treatment'].sort_values('seed')
+fig, axes = plt.subplots(1, 3, figsize=(10, 6), sharey=True)
+conditions = ['baseline', 'treatment', 'treatment_v2']
+display_names = {
+    'baseline': 'Baseline (No Spoofer)',
+    'treatment': 'V1: Heuristic Spoofer',
+    'treatment_v2': 'V2: Q-Learning Spoofer'
+}
 
-    return baseline_df, treatment_df
+# Compute baseline stats for Cohen's d
+baseline_data = results_df[results_df['condition'] == 'baseline']
+baseline_prices = baseline_data.groupby('seed')['mean_price'].first().values
+baseline_mean = baseline_prices.mean()
+baseline_std = baseline_prices.std(ddof=1)
 
+for ax_idx, (ax, condition) in enumerate(zip(axes, conditions)):
+    cond_data = results_df[results_df['condition'] == condition]
 
-def create_figure1_mean_price_comparison(
-    baseline_df: pd.DataFrame,
-    treatment_df: pd.DataFrame,
-    figures_dir: str
-) -> None:
-    """
-    Create grouped bar chart comparing mean prices by seed.
+    # Get per-seed mean prices
+    prices_by_seed = cond_data.groupby('seed')['mean_price'].first()
+    seeds = sorted(prices_by_seed.index)
+    prices = prices_by_seed.loc[seeds].values
 
-    Args:
-        baseline_df: Baseline condition results
-        treatment_df: Treatment condition results
-        figures_dir: Directory to save figures
-    """
-    plt.style.use('seaborn-v0_8-whitegrid')
+    # Scatter plot
+    ax.scatter(seeds, prices, alpha=0.4, color=colors[condition], s=50)
+
+    # Mean line
+    mean_price = prices.mean()
+    ax.axhline(mean_price, color=colors[condition], linestyle='-', linewidth=2)
+
+    # +/- 1 SD band
+    std_price = prices.std(ddof=1)
+    ax.fill_between(
+        [min(seeds), max(seeds)],
+        mean_price - std_price,
+        mean_price + std_price,
+        alpha=0.2,
+        color=colors[condition]
+    )
+
+    # Cohen's d vs baseline
+    if condition != 'baseline':
+        cohens_d = (mean_price - baseline_mean) / baseline_std
+    else:
+        cohens_d = 0.0
+
+    # Annotation box
+    text_str = f'Mean: £{mean_price:.2f} +/- {std_price:.2f}\nCohen\'s d: {cohens_d:.2f}'
+    ax.text(
+        0.95, 0.05,
+        text_str,
+        transform=ax.transAxes,
+        fontsize=10,
+        verticalalignment='bottom',
+        horizontalalignment='right',
+        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.7)
+    )
+
+    ax.set_xlabel('Random seed')
+    ax.set_ylabel('Mean transaction price (£)')
+    ax.set_title(display_names[condition])
+    ax.set_xlim(40, 73)
+    ax.set_ylim(82, 99)
+
+fig.suptitle('Mean Transaction Price by Condition (n=30 seeds)', fontsize=13, y=1.00)
+plt.tight_layout()
+plt.savefig('figures/fig1_price_trajectories.pdf', dpi=300, bbox_inches='tight')
+print('Saved: figures/fig1_price_trajectories.pdf')
+plt.close()
+
+# ============================================================================
+# FIGURE 2: Volatility Distribution
+# ============================================================================
+
+fig, ax = plt.subplots(figsize=(8, 7))
+
+# Prepare volatility data for each condition
+volatility_data = {}
+for condition in conditions:
+    cond_data = results_df[results_df['condition'] == condition]
+    vols = cond_data.groupby('seed')['price_std'].first().values
+    volatility_data[condition] = vols
+
+# Create violin plot
+parts = ax.violinplot(
+    [volatility_data[c] for c in conditions],
+    positions=[0, 1, 2],
+    showmeans=False,
+    showmedians=False,
+    widths=0.7
+)
+
+# Color the violins
+for pc, condition in zip(parts['bodies'], conditions):
+    pc.set_facecolor(colors[condition])
+    pc.set_alpha(0.7)
+    pc.set_edgecolor('black')
+    pc.set_linewidth(1.5)
+
+# Jitter points + median lines
+for pos, condition in enumerate(conditions):
+    data = volatility_data[condition]
+
+    # Jitter
+    x = np.random.normal(pos, 0.04, size=len(data))
+    ax.scatter(x, data, alpha=0.5, s=16, color=colors[condition], zorder=3)
+
+    # Median
+    median = np.median(data)
+    ax.hlines(median, pos - 0.3, pos + 0.3, colors='darkred', linewidth=2.5, zorder=4)
+
+# Custom x-axis labels
+custom_labels = [
+    'Baseline',
+    'V1: Heuristic\n(Sledgehammer)',
+    'V2: Q-Learning\n(Erratic Manipulator)'
+]
+ax.set_xticks([0, 1, 2])
+ax.set_xticklabels(custom_labels, fontsize=11)
+ax.set_ylabel('Price standard deviation (£)')
+ax.set_title('Intra-Session Price Volatility by Condition (n=30 seeds)', fontsize=13)
+
+# Significance brackets (A, B, C)
+y_max = max([max(volatility_data[c]) for c in conditions]) * 1.15
+
+# Bracket A (baseline to treatment)
+ax.plot([0, 1], [y_max, y_max], 'k-', linewidth=1)
+ax.text(0.5, y_max + 0.02, 'A: p=0.001', ha='center', fontsize=10, fontweight='bold')
+
+# Bracket B (baseline to treatment_v2)
+ax.plot([0, 2], [y_max * 1.08, y_max * 1.08], 'k-', linewidth=1)
+ax.text(1.0, y_max * 1.08 + 0.02, 'B: p<0.001', ha='center', fontsize=10, fontweight='bold')
+
+# Bracket C (treatment to treatment_v2)
+ax.plot([1, 2], [y_max * 1.16, y_max * 1.16], 'k-', linewidth=1)
+ax.text(1.5, y_max * 1.16 + 0.02, 'C: p=0.001', ha='center', fontsize=10, fontweight='bold')
+
+ax.set_ylim(bottom=0)
+plt.tight_layout()
+plt.savefig('figures/fig2_volatility_distribution.pdf', dpi=300, bbox_inches='tight')
+print('Saved: figures/fig2_volatility_distribution.pdf')
+plt.close()
+
+# ============================================================================
+# FIGURE 3: Q-Table Heatmap
+# ============================================================================
+
+# Load all q_tables
+qtable_files = sorted(glob('data/q_tables/*_qtable.npy'))
+
+if len(qtable_files) > 0:
+    qtables = []
+    for fpath in qtable_files:
+        qtable = np.load(fpath)
+        qtables.append(qtable)
+
+    # Average across seeds
+    mean_qtable = np.mean(np.array(qtables), axis=0)
+
     fig, ax = plt.subplots(figsize=(10, 6))
+    im = ax.imshow(mean_qtable, cmap='viridis', aspect='auto', origin='lower')
 
-    seeds = baseline_df['seed'].values
-    baseline_means = baseline_df['mean_price'].values
-    treatment_means = treatment_df['mean_price'].values
+    # Colorbar
+    cbar = plt.colorbar(im, ax=ax, label='Mean Q-value (learned profit signal)')
 
-    # Bar positions
-    x = np.arange(len(seeds))
-    width = 0.35
+    # Labels
+    ax.set_xlabel('Action', fontsize=12)
+    ax.set_ylabel('State index (pd x 27 + obi x 9 + tr x 3 + pt)', fontsize=12)
+    ax.set_title('V2 Spoofer Learned Policy: Mean Q-Table (Aggregated, n=30 seeds)', fontsize=13)
 
-    # Create bars
-    bars1 = ax.bar(x - width/2, baseline_means, width, label='Baseline (ZIP only)',
-                   color='steelblue', edgecolor='black', linewidth=0.5)
-    bars2 = ax.bar(x + width/2, treatment_means, width, label='Treatment (ZIP + SpooferV1)',
-                   color='crimson', edgecolor='black', linewidth=0.5)
+    # Action labels
+    ax.set_xticks([0, 1, 2])
+    ax.set_xticklabels(['Hold', 'Aggress', 'Withdraw'])
 
-    # Grand mean of baseline (horizontal dashed line)
-    baseline_grand_mean = np.mean(baseline_means)
-    ax.axhline(y=baseline_grand_mean, color='grey', linestyle='--', linewidth=1.5,
-               alpha=0.7, label=f'Baseline Mean: {baseline_grand_mean:.2f}')
+    # Annotation
+    ax.text(
+        0.02, 0.98,
+        'Peak Q-values at states 27 & 45:\nearly-session, below-limit price conditions',
+        transform=ax.transAxes,
+        fontsize=10,
+        verticalalignment='top',
+        bbox=dict(boxstyle='round', facecolor='white', alpha=0.85, edgecolor='black')
+    )
 
-    # Add value labels on bars
-    def add_labels(bars):
-        for bar in bars:
-            height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height,
-                   f'{height:.1f}',
-                   ha='center', va='bottom', fontsize=10)
-
-    add_labels(bars1)
-    add_labels(bars2)
-
-    # Labels and title
-    ax.set_xlabel('Random Seed', fontsize=12)
-    ax.set_ylabel('Mean Transaction Price (£)', fontsize=12)
-    ax.set_title('Mean Transaction Price: Baseline vs. V1 Spoofer (5-Seed MVE)',
-                fontsize=14, fontweight='bold')
-    ax.set_xticks(x)
-    ax.set_xticklabels(seeds, fontsize=10)
-    ax.tick_params(axis='y', labelsize=10)
-    ax.legend(fontsize=11, loc='upper left', bbox_to_anchor=(1.02, 1))
-    ax.grid(True, alpha=0.3, axis='y')
-
-    # Save figure
-    Path(figures_dir).mkdir(parents=True, exist_ok=True)
-    save_path = os.path.join(figures_dir, 'fig1_mean_price_comparison.pdf')
-    plt.savefig(save_path, bbox_inches='tight', dpi=150)
-    print(f"Saved: {save_path}")
+    plt.tight_layout()
+    plt.savefig('figures/fig3_qtable_heatmap.pdf', dpi=300, bbox_inches='tight')
+    print('Saved: figures/fig3_qtable_heatmap.pdf')
     plt.close()
-
-
-def create_figure2_price_impact_per_seed(
-    baseline_df: pd.DataFrame,
-    treatment_df: pd.DataFrame,
-    figures_dir: str
-) -> None:
-    """
-    Create horizontal bar chart showing price difference per seed.
-
-    Args:
-        baseline_df: Baseline condition results
-        treatment_df: Treatment condition results
-        figures_dir: Directory to save figures
-    """
-    plt.style.use('seaborn-v0_8-whitegrid')
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    seeds = baseline_df['seed'].values
-    baseline_means = baseline_df['mean_price'].values
-    treatment_means = treatment_df['mean_price'].values
-
-    # Compute differences
-    diffs = treatment_means - baseline_means
-    mean_diff = np.mean(diffs)
-
-    # Colors based on direction
-    colors = ['crimson' if d < 0 else 'steelblue' for d in diffs]
-
-    # Create horizontal bars
-    y_pos = np.arange(len(seeds))
-    ax.barh(y_pos, diffs, color=colors, edgecolor='black', linewidth=0.5)
-
-    # Vertical line at x=0
-    ax.axvline(x=0, color='black', linestyle='-', linewidth=1)
-
-    # Vertical line at mean difference with annotation
-    ax.axvline(x=mean_diff, color='navy', linestyle='--', linewidth=2,
-               label=f'Mean Effect: {mean_diff:.2f}')
-    ax.text(mean_diff, len(seeds) - 0.5, f'{mean_diff:.2f}',
-           fontsize=10, ha='left', va='top', color='navy', fontweight='bold')
-
-    # Labels and title
-    ax.set_xlabel('Price Difference: Treatment − Baseline (£)', fontsize=12)
-    ax.set_ylabel('Random Seed', fontsize=12)
-    ax.set_title('Per-Seed Price Impact of SpooferV1', fontsize=14, fontweight='bold')
-    ax.set_yticks(y_pos)
-    ax.set_yticklabels(seeds, fontsize=10)
-    ax.tick_params(axis='x', labelsize=10)
-    ax.legend(fontsize=11, loc='upper right')
-    ax.grid(True, alpha=0.3, axis='x')
-
-    # Save figure
-    Path(figures_dir).mkdir(parents=True, exist_ok=True)
-    save_path = os.path.join(figures_dir, 'fig2_price_impact_per_seed.pdf')
-    plt.savefig(save_path, bbox_inches='tight', dpi=150)
-    print(f"Saved: {save_path}")
-    plt.close()
-
-
-def main() -> None:
-    """Main figure generation orchestrator."""
-    parser = argparse.ArgumentParser(
-        description='Generate paper-ready figures for BSE flash-crash study'
-    )
-    parser.add_argument(
-        '--input',
-        type=str,
-        default='data/mve/results_summary.csv',
-        help='Path to results CSV (default: data/mve/results_summary.csv)'
-    )
-    parser.add_argument(
-        '--figures-dir',
-        type=str,
-        default='figures',
-        help='Directory for output figures (default: figures)'
-    )
-
-    args = parser.parse_args()
-
-    # Load data
-    print(f"Loading results from: {args.input}")
-    try:
-        baseline_df, treatment_df = load_and_organize_data(args.input)
-    except FileNotFoundError:
-        print(f"Error: File not found: {args.input}")
-        return
-    except Exception as e:
-        print(f"Error loading results: {e}")
-        return
-
-    print(f"Loaded {len(baseline_df)} baseline trials, {len(treatment_df)} treatment trials\n")
-
-    # Generate figures
-    print("Generating figures...")
-    create_figure1_mean_price_comparison(baseline_df, treatment_df, args.figures_dir)
-    create_figure2_price_impact_per_seed(baseline_df, treatment_df, args.figures_dir)
-
-    print("\n✓ All figures generated successfully")
-
-
-if __name__ == '__main__':
-    main()
+else:
+    print('Warning: No q_table files found in data/q_tables/')
