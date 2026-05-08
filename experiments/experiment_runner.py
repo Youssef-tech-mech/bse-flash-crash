@@ -15,6 +15,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Optional, Dict, List, Any
 
+
 # Set up import paths
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'src', 'bse'))
@@ -23,11 +24,12 @@ sys.path.insert(0, os.path.join(ROOT, 'src'))
 from BSE import market_session
 import BSE as _BSE
 from agents.spoofer_v1 import SpooferV1
-
+from agents.spoofer_q import SpooferQ
+_BSE.trader_type_to_class['SPOOFER_V1'] = SpooferV1
 
 # Register SpooferV1 with BSE's trader factory
 _BSE.trader_type_to_class['SPOOFER_V1'] = SpooferV1
-
+_BSE.trader_type_to_class['SPOOFER_Q'] = SpooferQ
 
 def build_order_schedule(starttime: float, endtime: float) -> Dict[str, Any]:
     """
@@ -149,6 +151,11 @@ def run_trial(
             'sellers': [('ZIP', 22), ('SPOOFER_V1', 3)],
             'buyers': [('ZIP', 25)]
         }
+    elif condition == 'treatment_v2':
+        traders_spec = {
+            'sellers': [('ZIP', 22), ('SPOOFER_Q', 3)],
+            'buyers': [('ZIP', 25)]
+        }
     else:
         raise ValueError(f"Unknown condition: {condition}")
 
@@ -203,6 +210,8 @@ def run_trial(
         return None
 
 
+
+
 def main() -> None:
     """Main experiment orchestrator."""
     parser = argparse.ArgumentParser(
@@ -222,12 +231,17 @@ def main() -> None:
         help='Directory for output files (default: data/mve)'
     )
 
+    parser.add_argument(
+        '--conditions', type=str, nargs='+', default=['baseline', 'treatment'],
+        help='Conditions to run (e.g. baseline treatment treatment_v2)'
+    )
+
     args = parser.parse_args()
+    conditions = args.conditions
 
     # Experiment parameters
     starttime = 0.0
     endtime = 600.0
-    conditions = ['baseline', 'treatment']
 
     # Collect results
     all_results = []
