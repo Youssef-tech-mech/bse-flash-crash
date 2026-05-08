@@ -27,3 +27,36 @@
 
 
  Document that SpooferV1 behaves more like an "Aggressive Pinger" than a pure passive spoofer. It executes real trades at the price floor rather than faking liquidity. This distinction is worth one paragraph in your Discussion and separates your analysis from a naive description of spoofing.
+ 
+## Finding 7 — v2 ε-exploration phase partially offsets manipulation effect
+Seeds 42, 45: v2 raised mean price vs baseline. Agent is in high-ε
+territory (near-random actions), meaning ~33% of actions are WITHDRAW
+(passive high ask), which *reduces* downward pressure vs v1's constant
+aggression. This is not a bug — it is the exploration-exploitation 
+tradeoff manifesting as a measurable market effect.
+Implication for write-up: compare v2 to v1 AFTER ε has decayed,
+i.e., interpret full-30-seed results as a mixture of early-exploration
+and late-exploitation phases within each episode.
+
+## Finding 8 — Agent S22 near-zero Q-table (max Q=0.078)
+BSE's stochastic scheduler may call an agent rarely AND in states 
+where profitable trades never occur. Agent S22 visited only 9/81 states
+with max reward 0.078 — consistent with an agent that was never in the 
+right state at the right time to capture a profitable trade signal.
+This is the sparse-reward problem in tabular RL applied to short-horizon 
+stochastic environments. Document as a limitation.
+
+## Finding 9 — Q-table policy structure: bid-heavy state specialisation
+Aggregated heatmap shows learned value concentrated in states where
+OBI=0 (bid-heavy) and PT=0 (price below limit). Agent discovered WITHOUT
+explicit programming that bid-heavy conditions are the profitable attack
+window. States with OBI=2 (ask-heavy) are correctly assigned near-zero
+value. This is emergent policy structure from sparse profit signals —
+the core RL finding of the project.
+
+## Finding 10 — v1 vs v2 outcome equivalence with mechanism divergence  
+If paired t-test confirms p > 0.05 for v1 vs v2 price difference:
+Both agents depress prices equivalently but v2 achieves this through
+a learned structured policy rather than a hard-coded rule. This is the
+"sample-efficient manipulation" finding — relevant for regulators
+designing detection systems that target learning agents.
