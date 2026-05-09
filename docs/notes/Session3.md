@@ -1,0 +1,2 @@
+ the feedback reviewer was applying intuition from real-market spoofing (where the spoofer posts fake orders and cancels them before execution). Your v1 is different: it is a Momentum Igniter that executes real trades at cost, profiting zero per trade but seeding cheap transaction signals into the ZIP observation window.
+ 
