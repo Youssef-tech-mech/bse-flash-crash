@@ -7,38 +7,72 @@ import seaborn as sns
 
 
 def load_tape_data():
-    # Adjust this path if your tape files are in a specific subfolder like data/full_run/
-    tape_files = glob.glob('data/*_tape.csv') + glob.glob('data/**/*_tape.csv', recursive=True)
+    # Load tapes from specific directory structure
+    baseline_files = glob.glob('data/treatment_v1/baseline_seed*_tape.csv')
+    v1_files = glob.glob('data/treatment_v1/treatment_seed*_tape.csv')
+    v2_files = glob.glob('data/treatment_v2/treatment_v2_seed*_tape.csv')
 
-    if not tape_files:
-        print("No tape files found. Please check your data directory.")
-        return pd.DataFrame()
+    file_counts = {
+        'baseline': len(baseline_files),
+        'treatment': len(v1_files),
+        'treatment_v2': len(v2_files)
+    }
 
     all_data = []
-    for f in tape_files:
-        # Extract condition from filename (e.g., baseline_seed42_tape.csv)
-        basename = os.path.basename(f)
-        if 'baseline' in basename:
-            cond = 'baseline'
-        elif 'treatment_v2' in basename:
-            cond = 'treatment_v2'
-        elif 'treatment' in basename:
-            cond = 'treatment'
-        else:
-            continue
-
+    for f in baseline_files:
         try:
             df = pd.read_csv(f, header=None, names=['type', 'time', 'price'], on_bad_lines='skip')
             df = df[df['type'].str.strip() == 'TRD']
             df['price'] = pd.to_numeric(df['price'])
             df['time'] = pd.to_numeric(df['time'])
-            df['condition'] = cond
+            df['condition'] = 'baseline'
+            all_data.append(df)
+        except Exception as e:
+            continue
+
+    for f in v1_files:
+        try:
+            df = pd.read_csv(f, header=None, names=['type', 'time', 'price'], on_bad_lines='skip')
+            df = df[df['type'].str.strip() == 'TRD']
+            df['price'] = pd.to_numeric(df['price'])
+            df['time'] = pd.to_numeric(df['time'])
+            df['condition'] = 'treatment'
+            all_data.append(df)
+        except Exception as e:
+            continue
+
+    for f in v2_files:
+        try:
+            df = pd.read_csv(f, header=None, names=['type', 'time', 'price'], on_bad_lines='skip')
+            df = df[df['type'].str.strip() == 'TRD']
+            df['price'] = pd.to_numeric(df['price'])
+            df['time'] = pd.to_numeric(df['time'])
+            df['condition'] = 'treatment_v2'
             all_data.append(df)
         except Exception as e:
             continue
 
     if not all_data: return pd.DataFrame()
-    return pd.concat(all_data, ignore_index=True)
+
+    full_data = pd.concat(all_data, ignore_index=True)
+
+    # Print file counts
+    print(f"Baseline files found: {file_counts['baseline']}")
+    print(f"V1 files found: {file_counts['treatment']}")
+    print(f"V2 files found: {file_counts['treatment_v2']}")
+
+    # Print last trade timestamp per condition
+    last_times = {}
+    for cond in ['baseline', 'treatment', 'treatment_v2']:
+        cond_data = full_data[full_data['condition'] == cond]
+        if not cond_data.empty:
+            last_times[cond] = int(cond_data['time'].max())
+        else:
+            last_times[cond] = None
+
+    print(f"Last trade timestamp per condition: baseline={last_times['baseline']}, v1={last_times['treatment']}, v2={last_times['treatment_v2']}")
+
+    return full_data
 
 
 def plot_adaptation(df):
@@ -106,6 +140,23 @@ def plot_adaptation(df):
             ax.annotate('sparse data', xy=(x, y), xytext=(5, 10),
                        textcoords='offset points', fontsize=9, style='italic',
                        color=colors[cond], alpha=0.7)
+
+    ax.annotate('Market activity ceases\n(no trades recorded)',
+                xy=(420, 81.5),
+                fontsize=10,
+                color='#666666',
+                ha='center',
+                style='italic')
+
+    # Add small vertical markers showing last trade time
+    ax.axvline(x=373, color='#E05C5C', linewidth=1,
+               linestyle=':', alpha=0.7)
+    ax.axvline(x=236, color='#5B8DD9', linewidth=1,
+               linestyle=':', alpha=0.7)
+    ax.text(373, 80.3, 'V1 last\ntrade', color='#E05C5C',
+            fontsize=8, ha='center')
+    ax.text(236, 80.3, 'V2 last\ntrade', color='#5B8DD9',
+            fontsize=8, ha='center')
 
     ax.legend(loc='lower left')
 
