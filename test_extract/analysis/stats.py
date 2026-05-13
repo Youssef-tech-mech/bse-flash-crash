@@ -1,8 +1,4 @@
-﻿# Bristol Stock Exchange (BSE) — Cliff (2018)
-# "BSE: A Minimal Simulation of a Limit-Order-Book Stock Exchange"
-# EMSS 2018. Source: https://github.com/davecliff/BristolStockExchange
-
-"""
+﻿"""
 Statistical analysis of BSE flash-crash experiment results.
 
 Loads experiment results CSV and performs paired statistical tests.

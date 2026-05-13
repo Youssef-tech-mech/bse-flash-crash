@@ -1,40 +1,14 @@
 """
-SpooferQ — Tabular Q-Learning Spoofer Agent (V2)
-COMP4105 BSE Flash Crash Project, University of Nottingham (2026)
+Spoofer Q-Learning Agent for BSE Trading
 
-Inherits from BSE Trader base class (Cliff, 2018).
+This module implements a Q-learning spoofing agent (v2).
+It learns optimal attack timing using an 81-state Q-table based on:
+- pd:  Price Direction from last tick (Down, Flat, Up) - noisy but reactive
+- obi: Order Book Imbalance (Bid-heavy, Balanced, Ask-heavy)
+- tr:  Time Remaining (Early, Mid, Late)
+- pt:  Price relative to Limit (Below, Near, Above)
 
-Implements a tabular Q-learning agent that learns optimal attack timing
-from pure profit signals — no manipulation reward is encoded. The agent
-must discover that spoofing is profitable through market interaction.
-
-State space (81 states):
-    state = pd*27 + obi*9 + tr*3 + pt
-    pd:  Price Direction    — Down(0), Flat(1), Up(2)
-    obi: Order Book Imbalance — Bid-heavy(0), Balanced(1), Ask-heavy(2)
-    tr:  Time Remaining     — Early(0), Mid(1), Late(2)
-    pt:  Price vs Limit     — Below(0), Near(1), Above(2)
-
-Actions:
-    0 = Hold      — submit nothing this tick
-    1 = Aggress   — submit ask at limit price (cost floor, real trade)
-    2 = Withdraw  — submit passive ask at limit + 20 (never executes)
-
-Learning:
-    Q[s,a] += alpha * (reward + gamma * max(Q[s']) - Q[s,a])
-    alpha=0.1, gamma=0.9
-    epsilon decays from 1.0 to 0.05 (decay=0.995 per update)
-    Reward: trade_price - limit (personal profit only)
-
-Empirical finding:
-    Aggregated Q-table (n=30 seeds) shows policy specialisation in
-    early-session, below-limit states (tr=0, pt=0). Agent discovered
-    this attack window without explicit programming.
-
-Reference:
-    Cliff, D. (2018). BSE: A Minimal Simulation of a Limit-Order-Book
-    Stock Exchange. Proceedings of EMSS 2018, Budapest.
-    https://github.com/davecliff/BristolStockExchange
+Actions: 0=Hold, 1=Aggress (limit), 2=Withdraw (passive high)
 """
 
 import sys

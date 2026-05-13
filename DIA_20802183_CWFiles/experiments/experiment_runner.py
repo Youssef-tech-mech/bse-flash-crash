@@ -1,17 +1,10 @@
 """
-Experiment Runner — COMP4105 BSE Flash Crash Project
+Main experiment orchestrator for BSE flash-crash studies.
 
-Runs baseline and treatment conditions using the Bristol Stock Exchange
-simulator (Cliff, 2018) across multiple random seeds.
-
-Reference:
-    Cliff, D. (2018). BSE: A Minimal Simulation of a Limit-Order-Book
-    Stock Exchange. EMSS 2018.
+Runs controlled experiments comparing baseline (all ZIP) vs. treatment
+(ZIP + spoofing agents) conditions across multiple random seeds.
+Parses transaction data and computes summary statistics.
 """
-
-# Bristol Stock Exchange (BSE) — Cliff (2018)
-# "BSE: A Minimal Simulation of a Limit-Order-Book Stock Exchange"
-# EMSS 2018. Source: https://github.com/davecliff/BristolStockExchange
 
 import sys
 import os

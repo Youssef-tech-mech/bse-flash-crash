@@ -1,32 +1,24 @@
 """
-SpooferV1 — Heuristic Momentum Igniter Agent
-COMP4105 BSE Flash Crash Project, University of Nottingham (2026)
 
-Inherits from BSE Trader base class (Cliff, 2018).
+Spoofer V1 Agent for BSE Trading
 
-Implements a rule-based spoofing strategy using a three-state machine
-(IDLE → ATTACK → COOLDOWN) that seeds cheap transactions to trigger
-Widrow-Hoff margin adaptation in ZIP counterparties.
+This module implements a sophisticated spoofing agent that manipulates the
+Widrow-Hoff margin adaptation mechanism in the BSE. The agent uses a
+state machine with three states:
 
-Mechanism:
-    IDLE:     Monitors best bid. Probabilistically triggers attack when
-              best_bid >= limit (profitable execution available).
-    ATTACK:   Submits ask at absolute limit price (cost floor). Executes
-              real trades — this agent is a Momentum Igniter, not a passive
-              LOB spoofer. ZIP buyers observe cheap executed trades and
-              revise bids downward via Widrow-Hoff delta rule.
-    COOLDOWN: Submits passive ask at limit * 1.05. Waits for ZIP adaptation
-              to propagate before returning to IDLE.
+- IDLE: Normal selling behavior, monitors best bid and probabilistically
+        triggers attacks when favorable conditions exist.
+- ATTACK: Aggressively undercuts the limit price. Under the Widrow-Hoff
+          learning rule, ZIP buyers observe this low-price trade and lower
+          their bids (assuming the seller is cheap).
+- COOLDOWN: Submits passive orders at elevated prices to wait out the
+            market reaction, then returns to IDLE.
 
-Design note:
-    Price safety constraint: price = max(limit, price) guarantees
-    non-negative profit per transaction by construction.
-    Empirically verified: net P/L = £0.00 on seed 64 (177 trades).
 
-Reference:
-    Cliff, D. (2018). BSE: A Minimal Simulation of a Limit-Order-Book
-    Stock Exchange. Proceedings of EMSS 2018, Budapest.
-    https://github.com/davecliff/BristolStockExchange
+The exploitation works because:
+1. The aggressive bid in ATTACK triggers ZIP's loss-driven margin increase
+2. ZIP buyers then submit bids at higher prices
+3. The spoofer captures these higher bids at the limit price in COOLDOWN
 """
 
 import sys

@@ -1,6 +1,3 @@
-# Bristol Stock Exchange (BSE) — Cliff (2018)
-# "BSE: A Minimal Simulation of a Limit-Order-Book Stock Exchange"
-# EMSS 2018. Source: https://github.com/davecliff/BristolStockExchange
 import os
 import sys
 from pathlib import Path

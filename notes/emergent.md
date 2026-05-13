@@ -65,3 +65,40 @@ designing detection systems that target learning agents.
 V1 is a Blunt Instrument — consistent price depression, moderate volatility. V2 is an Erratic Manipulator — equivalent price depression, but 28% more volatility injected into the market.
 
 This is a stronger Distinction finding than equivalence. The RL agent discovered a noisier attack strategy than the hand-coded one, possibly because the ε-greedy exploration phase itself generates random order submissions that destabilise the book even when not profitably executed.Result 2 — Volume: v2 generates significantly more trades than v1C: v1 → v2 volume: Δ=+11.4, p=0.0512 (borderline), d=+0.371V2 generates 75.6 trades/session vs v1's 64.2. Combined with the volatility finding, the picture is: v2 is a higher-frequency, higher-noise attacker. The Q-learning agent, still in partial exploration, fires more actions and produces more market churn even when those actions don't all result in profitable trades.
+
+
+## Finding 13 — Time to Liquidity Exhaustion (TLE): Accelerated Artificial Churn
+
+Last recorded trade timestamps (n=30 seeds, tape files):
+  Baseline: t=109s  ← healthy equilibrium, efficient market clearance
+  V1:       t=373s  ← 264s of artificial churn above natural equilibrium
+  V2:       t=236s  ← 127s of artificial churn above natural equilibrium
+
+TLE (normalised to baseline):
+  V1 TLE = 373 − 109 = 264 seconds
+  V2 TLE = 236 − 109 = 127 seconds
+  V2 exhausts artificial liquidity 52% faster than V1 (137s difference)
+
+Mechanism:
+  V1 (Sledgehammer): consistent heuristic applies steady downward pressure.
+  ZIP buyers adapt margins GRADUALLY via Widrow-Hoff → slow exhaustion.
+  
+  V2 (Erratic Manipulator): ε-greedy exploration injects violent noise.
+  ZIP buyers experience panic-like margin updates → rapid exhaustion.
+  V2 burns out ZIP buyers' willingness to trade 137s faster than V1.
+
+Key insight: Baseline t=109 is NOT market failure — it is market EFFICIENCY.
+The CDA found all mutually profitable trades and cleared them. Spoofers drag
+the market out of equilibrium artificially. V2 is more disruptive precisely
+because its erratic behaviour forces faster defensive adaptation in ZIP traders.
+
+Write-up framing:
+"We introduce Time to Liquidity Exhaustion (TLE) as a normalised temporal
+metric, defined as the duration of trading activity above the natural
+equilibrium cessation point (baseline t=109s). V1 sustained 264 seconds of
+artificial churn; V2 sustained only 127 seconds, indicating that V2's erratic
+exploratory behaviour accelerates ZIP margin adaptation, exhausting artificial
+liquidity 52% faster despite equivalent session-level price depression."
+
+Location in paper: Results 4.4 (temporal dynamics), Discussion paragraph C/E.
+This finding emerged unplanned from Fig 4 tape data analysis.
